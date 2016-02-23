@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Hello World!</title>
+    <link rel="stylesheet" href="./node_modules/vis/dist/vis.css">
+  </head>
+  <body>
+    <div ng-app="VisApp" ng-cloak>
+      <app-nav></app-nav>
+      <ui-view></ui-view>
+    <div>
+
+    <script src="./app.js"></script>
+    <script src="./node_modules/angular-loading-bar/build/loading-bar.js"></script>
+
+    <div>
+      <label for="model">Model</label>
+      <select name="model" id="model"></select>
+    </div>
+    <div>
+      <label for="start">Start</label>
+      <input type="date" name="start" id="start">
+    </div>
+
+    <div>
+      <label for="end">End</label>
+      <input type="date" name="end" id="end">
+    </div>
+    <div>
+      <button id="visualize">Visualize</button>
+    </div>
+
+    <div id="visualization"></div>
+    <script>
+    'use strict';
+    const vis = require('vis');
+    const visualization = document.getElementById('visualization');
+    const baseUrl = 'https://api.codetutor.me';
+    const modelSelect = document.getElementById('model');
+    const authHeaders = { headers: {
+      Authentication: process.env.HTTP_PASSWORD
+    }};
+
+    fetch(`${baseUrl}/timeseries`, authHeaders)
+      .then( res => res.json() )
+      .then( serieses => {
+        return serieses.map( series => {
+            let option = document.createElement('option');
+            option.value = option.text = series;
+            modelSelect.add(option);
+            return option;
+          });
+      })
+      .then( () => {
+        document.getElementById('visualize').onclick = function() {
+          visualization.innerHTML = '';
+          var model = modelSelect.value;
+          var start = document.getElementById('start').value;
+          var end = document.getElementById('end').value;
+          
+          fetch(`${baseUrl}/timeseries/${model}?start=${start}&end=${end}`, authHeaders)
+          .then( resp =>  resp.json() )
+          // .then( data => data.filter( () => Math.random() > 0.3 ) )
+          .then(data => {
+            return data.map( reading => {
+              reading.x = reading.__date;
+              reading.y = reading.value;
+              return reading;
+            });
+          })
+          .then( data => new vis.DataSet(data) )
+          .then( dataset => {
+            console.log(dataset)
+            new vis.Graph2d(visualization, dataset, { drawPoints: false, start: start, end:end });
+          })
+          .catch(err => console.error(err) );
+        };
+      })
+
+    </script>
+  </body>
+</html>
